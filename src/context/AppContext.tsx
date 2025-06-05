@@ -259,13 +259,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   
   // Assignments CRUD
   const addAssignment = (assignment: Omit<Assignment, 'id' | 'relatedEvents'>) => {
-    const newAssignment = { 
-      ...assignment, 
-      id: uuidv4(), 
-      relatedEvents: [] 
+    const newAssignment = {
+      ...assignment,
+      id: uuidv4(),
+      relatedEvents: []
     };
-    setAssignments([...assignments, newAssignment]);
-    
+
+    let assignmentToStore = newAssignment;
+
     // Auto generate study sessions if it's a DM
     if (assignment.type === 'dm') {
       const generatedSessions = generateStudySessions(
@@ -278,28 +279,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         subjects.find(s => s.id === assignment.subjectId)!,
         events,
         studySessions,
-        userPreferences
+        userPreferences,
+        assignment.estimatedHours
       );
-      
+
       if (generatedSessions.length > 0) {
         setStudySessions([...studySessions, ...generatedSessions]);
-        
-        // Update the assignment with related study sessions
-        const updatedAssignment = {
+
+        assignmentToStore = {
           ...newAssignment,
           relatedEvents: generatedSessions.map(s => s.id)
         };
-        setAssignments([...assignments, updatedAssignment]);
-        
+
         addNotification({
           title: 'Étude planifiée',
           message: `${generatedSessions.length} sessions d'étude ont été ajoutées pour ${assignment.title}`,
           type: 'success',
         });
-      } else {
-        setAssignments([...assignments, newAssignment]);
       }
     }
+
+    setAssignments([...assignments, assignmentToStore]);
   };
   
   const updateAssignment = (assignment: Assignment) => {
@@ -384,7 +384,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           subjects.find(s => s.id === assignment.subjectId)!,
           events,
           newSessions,
-          userPreferences
+          userPreferences,
+          assignment.estimatedHours
         );
         
         if (generatedSessions.length > 0) {
