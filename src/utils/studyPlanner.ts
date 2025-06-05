@@ -104,7 +104,8 @@ export const generateStudySessions = (
   subject: Subject,
   events: Event[],
   existingStudySessions: StudySession[],
-  preferences: UserPreferences
+  preferences: UserPreferences,
+  estimatedHours?: number
 ): StudySession[] => {
   const result: StudySession[] = [];
   const eventDate = parseISO(event.startTime);
@@ -165,16 +166,17 @@ export const generateStudySessions = (
   } 
   // For DMs, generate sessions based on estimated work time
   else if (event.type === 'dm') {
-    // Try to find the assignment related to this DM
-    const assignment = existingStudySessions.find(s => s.relatedToId === event.id);
-    const estimatedHours = assignment ? 2 : 1;
-    
-    // Calculate days between now and deadline
-    const daysUntilDeadline = differenceInDays(eventDate, now);
-    let numberOfSessions = Math.min(daysUntilDeadline, estimatedHours);
-    
-    // Ensure at least one session if the deadline is tomorrow
-    numberOfSessions = Math.max(numberOfSessions, 1);
+    const hoursToSpend = estimatedHours ?? 2;
+
+    // Calculate how many study sessions are needed based on preferred session duration
+    const sessionDurationHours = studyDuration / 60;
+    let numberOfSessions = Math.ceil(hoursToSpend / sessionDurationHours);
+
+    // Days available until the deadline
+    const daysUntilDeadline = Math.max(differenceInDays(eventDate, now), 1);
+
+    // Avoid generating more sessions than days available
+    numberOfSessions = Math.min(numberOfSessions, daysUntilDeadline);
     
     // Generate sessions distributed over days
     for (let i = 0; i < numberOfSessions; i++) {
